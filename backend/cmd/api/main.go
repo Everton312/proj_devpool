@@ -3,15 +3,15 @@ package main
 import (
 	"fmt"
 	"log"
-	"log/slog"
 	"net/http"
 
 	"github.com/Everton312/proj-devpool/internal/config"
+	"github.com/Everton312/proj-devpool/internal/handler"
+	"github.com/Everton312/proj-devpool/internal/repository"
+	"github.com/Everton312/proj-devpool/internal/service"
 )
 
 func main() {
-
-	mux := http.NewServeMux()
 
 	db, err := config.ConnectDB()
 	if err != nil {
@@ -21,17 +21,14 @@ func main() {
 
 	fmt.Println("BANCO: OK")
 
-	http.HandleFunc("/", handleHello)
+	repos := repository.New(db)
+	services := service.New(repos)
+	userHandler := handler.NewUserHandler(services)
 
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /users", userHandler.CreateUser)
+	mux.HandleFunc("GET /users", userHandler.GetAllUsers)
+
+	fmt.Println("RODANDO 8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
-}
-
-func handleHello(w http.ResponseWriter, _ *http.Request) {
-	wc, err := w.Write([]byte("Hello World\n"))
-	if err != nil {
-		slog.Error("error writing response", "err", err)
-		return
-	}
-
-	fmt.Println("%d bytes written\n", wc)
 }

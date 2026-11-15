@@ -48,6 +48,23 @@ func (s *Services) Add(ctx context.Context, input models.CreateUsersInput) (*mod
 		return nil, errors.New("a senha deve ter pelo menos 8 caracteres")
 	}
 
+	//verifica se já tá cadastrado o email e login usando as funcs do repository
+	emailExists, err := s.repos.User.ExistsByEmail(ctx, email)
+	if err != nil {
+		return nil, err
+	}
+	if emailExists {
+		return nil, errors.New("este e-mail já está cadastrado")
+	}
+
+	loginExists, err := s.repos.User.ExistsByLogin(ctx, login)
+	if err != nil {
+		return nil, err
+	}
+	if loginExists {
+		return nil, errors.New("este login já está cadastrado")
+	}
+
 	//BCrypt
 	hash, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
 	if err != nil {

@@ -12,6 +12,8 @@ type Repositories struct {
 	User interface {
 		GetAll(ctx context.Context) ([]models.Users, error)
 		Add(ctx context.Context, newUser *models.Users) error
+		ExistsByEmail(ctx context.Context, email string) (bool, error)
+		ExistsByLogin(ctx context.Context, login string) (bool, error)
 	}
 }
 
