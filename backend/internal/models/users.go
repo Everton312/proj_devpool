@@ -24,9 +24,10 @@ type CreateUsersInput struct {
 }
 
 type UpdateUsersInput struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Login    string `json:"login"`
-	Password string `json:"password"`
-	Active   *bool  `json:"active"`
+	Name            string `json:"name"`
+	Email           string `json:"email"`
+	Login           string `json:"login"`
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
+	Active          *bool  `json:"active"`
 }

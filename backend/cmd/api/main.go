@@ -7,6 +7,7 @@ import (
 
 	"github.com/Everton312/proj-devpool/internal/config"
 	"github.com/Everton312/proj-devpool/internal/handler"
+	"github.com/Everton312/proj-devpool/internal/middleware"
 	"github.com/Everton312/proj-devpool/internal/repository"
 	"github.com/Everton312/proj-devpool/internal/service"
 )
@@ -28,7 +29,10 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /users", userHandler.CreateUser)
 	mux.HandleFunc("GET /users", userHandler.GetAllUsers)
+	mux.HandleFunc("GET /users/{id}", userHandler.GetUserById)
+	mux.HandleFunc("DELETE /users/{id}", userHandler.DeleteUserById)
+	mux.HandleFunc("PUT /users/{id}", userHandler.Update)
 
 	fmt.Println("RODANDO 8080")
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	log.Fatal(http.ListenAndServe(":8080", middleware.EnableCORS(mux)))
 }

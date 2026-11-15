@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/mail"
 	"strings"
 	"uuid"
@@ -25,6 +26,89 @@ func New(repos *repository.Repositories) *Services {
 func (u Services) GetAll(ctx context.Context) ([]models.Users, error) {
 	users, err := u.repos.User.GetAll(ctx)
 	return users, err
+}
+
+func (u Services) GetById(ctx context.Context, id uuid.UUID) (*models.Users, error) {
+	user, err := u.repos.User.GetById(ctx, id)
+	return user, err
+}
+
+func (u Services) DeleteById(ctx context.Context, id uuid.UUID) error {
+	err := u.repos.User.DeleteById(ctx, id)
+	return err
+}
+
+func (u Services) Update(ctx context.Context, id uuid.UUID, input models.UpdateUsersInput) (*models.Users, error) {
+	user, err := u.repos.User.GetById(ctx, id)
+
+	if err != nil {
+		return nil, err
+	}
+
+	name := strings.TrimSpace(input.Name)
+	if len(name) < 3 {
+		return nil, fmt.Errorf("%w: o nome deve ter pelo menos 3 caracteres", models.ErrValidation)
+	}
+
+	login := strings.TrimSpace(input.Login)
+	if len(login) < 3 {
+		return nil, fmt.Errorf("%w: o login deve ter pelo menos 3 caracteres", models.ErrValidation)
+	}
+
+	email := strings.TrimSpace(input.Email)
+	if _, err := mail.ParseAddress(email); err != nil {
+		return nil, fmt.Errorf("%w: email inválido", models.ErrValidation)
+	}
+
+	emailExists, err := u.repos.User.ExistsByEmailExcludingID(ctx, email, id)
+	if err != nil {
+		return nil, err
+	}
+	if emailExists {
+		return nil, fmt.Errorf("%w: email já cadastrado", models.ErrValidation)
+	}
+
+	loginExists, err := u.repos.User.ExistsByLoginExcludingID(ctx, login, id)
+	if err != nil {
+		return nil, err
+	}
+	if loginExists {
+		return nil, fmt.Errorf("%w: login já cadastrado", models.ErrValidation)
+	}
+
+	if input.NewPassword != "" {
+		if input.CurrentPassword == "" {
+			return nil, fmt.Errorf("%w: a senha atual é obrigatória para definir uma nova senha", models.ErrValidation)
+		}
+
+		err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(input.CurrentPassword))
+		if err != nil {
+			return nil, fmt.Errorf("%w: senha atual incorreta", models.ErrInvalidPassword)
+		}
+
+		if len(input.NewPassword) < 8 {
+			return nil, fmt.Errorf("%w: a senha deve ter pelo menos 8 caracteres", models.ErrInvalidPassword)
+		}
+		hash, err := bcrypt.GenerateFromPassword([]byte(input.NewPassword), bcrypt.DefaultCost)
+		if err != nil {
+			return nil, err
+		}
+		user.PasswordHash = string(hash)
+	}
+
+	if input.Active != nil {
+		user.Active = *input.Active
+	}
+	user.Name = name
+	user.Email = email
+	user.Login = login
+
+	if err := u.repos.User.Update(ctx, user); err != nil {
+		return nil, err
+	}
+
+	return user, nil
+
 }
 
 func (s *Services) Add(ctx context.Context, input models.CreateUsersInput) (*models.Users, error) {
