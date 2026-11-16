@@ -55,11 +55,10 @@ func (u Services) Update(ctx context.Context, id uuid.UUID, input models.UpdateU
 		return nil, fmt.Errorf("%w: o login deve ter pelo menos 3 caracteres", models.ErrValidation)
 	}
 
-	email := strings.TrimSpace(input.Email)
-	if _, err := mail.ParseAddress(email); err != nil {
-		return nil, fmt.Errorf("%w: email inválido", models.ErrValidation)
+	email := strings.ToLower(strings.TrimSpace(input.Email))
+	if !isValidEmail(email) {
+		return nil, fmt.Errorf("%w: e-mail inválido", models.ErrValidation)
 	}
-
 	emailExists, err := u.repos.User.ExistsByEmailExcludingID(ctx, email, id)
 	if err != nil {
 		return nil, err
@@ -112,7 +111,6 @@ func (u Services) Update(ctx context.Context, id uuid.UUID, input models.UpdateU
 }
 
 func (s *Services) Add(ctx context.Context, input models.CreateUsersInput) (*models.Users, error) {
-	//tratando inputs
 	name := strings.TrimSpace(input.Name)
 	if len(name) < 3 {
 		return nil, errors.New("o nome deve ter pelo menos 3 caracteres")
@@ -123,8 +121,8 @@ func (s *Services) Add(ctx context.Context, input models.CreateUsersInput) (*mod
 		return nil, errors.New("o login deve ter pelo menos 3 caracteres")
 	}
 
-	email := strings.TrimSpace(input.Email)
-	if _, err := mail.ParseAddress(email); err != nil {
+	email := strings.ToLower(strings.TrimSpace(input.Email))
+	if !isValidEmail(email) {
 		return nil, errors.New("e-mail inválido")
 	}
 
@@ -174,4 +172,25 @@ func (s *Services) Add(ctx context.Context, input models.CreateUsersInput) (*mod
 	}
 
 	return newUser, nil
+}
+
+func isValidEmail(email string) bool {
+	addr, err := mail.ParseAddress(email)
+	if err != nil || addr.Address != email {
+		return false
+	}
+
+	parts := strings.Split(email, "@")
+	if len(parts) != 2 || parts[0] == "" || !strings.Contains(parts[1], ".") {
+		return false
+	}
+
+	domainParts := strings.Split(parts[1], ".")
+	for _, p := range domainParts {
+		if p == "" {
+			return false
+		}
+	}
+
+	return true
 }

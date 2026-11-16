@@ -6,6 +6,7 @@ import UserFormModal from './components/UserFormModal.vue'
 const users = ref([])
 const searchQuery = ref('')
 const loading = ref(false)
+const deleting = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 const isFormOpen = ref(false)
@@ -48,7 +49,10 @@ async function fetchUsers() {
     users.value = await userService.getAll()
     selectedIds.value = []
   } catch (err) {
-    errorMessage.value = err.message
+    errorMessage.value =
+      err.name === 'TimeoutError'
+        ? 'O servidor demorou muito para responder.'
+        : err.message
   } finally {
     loading.value = false
   }
@@ -79,7 +83,7 @@ async function handleDeleteSelected() {
   if (count === 0) return
 
   if (!confirm(`Deseja realmente excluir ${count} usuário(s) selecionado(s)?`)) return
-
+  deleting.value = true
   errorMessage.value = ''
   try {
     await Promise.all(selectedIds.value.map((id) => userService.remove(id)))
@@ -88,6 +92,8 @@ async function handleDeleteSelected() {
     fetchUsers()
   } catch (err) {
     errorMessage.value = err.message
+  } finally{
+    deleting.value = false
   }
 }
 
@@ -112,7 +118,7 @@ onMounted(() => {
         <div
           class="card-header bg-white border-bottom py-4 px-4 d-flex flex-wrap justify-content-between align-items-center gap-3"
         >
-          <h1 class="h4 fw-bold mb-0 text-dark">User management</h1>
+          <h1 class="h4 fw-bold mb-0 text-dark">Gerenciamento de Usuários</h1>
 
           <div class="flex-grow-1" style="max-width: 280px;">
             <input
@@ -127,9 +133,15 @@ onMounted(() => {
             <button
               v-if="selectedIds.length > 0"
               class="btn btn-outline-danger btn-sm px-3 py-2 rounded-3 fw-medium"
+              :disabled="deleting"
               @click="handleDeleteSelected"
             >
-              Excluir ({{ selectedIds.length }})
+              <span
+                v-if="deleting"
+                class="spinner-border spinner-border-sm me-2"
+                role="status"
+              ></span>
+              {{ deleting ? 'Excluindo...' : `Excluir (${selectedIds.length})` }}
             </button>
 
             <button
