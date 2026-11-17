@@ -10,40 +10,48 @@ async function handleResponse(response){
     return data
 }
 
-async function getAll(){
-    const res = await fetch(`${BASE_URL}/users`,{
-        signal: AbortSignal.timeout(5000)
+async function request(endpoint, options = {}) {
+  try {
+    const res = await fetch(`${BASE_URL}${endpoint}`, {
+      ...options,
+      signal: AbortSignal.timeout(5000)
     })
-    
-    return handleResponse(res)
+    return await handleResponse(res)
+  } catch (err) {
+    if (err.name === 'TimeoutError') {
+      throw new Error('O servidor demorou muito para responder. Tente novamente.')
+    }
+    if (err.name === 'TypeError') {
+      throw new Error('Não foi possível conectar ao servidor. Verifique se a API está rodando...')
+    }
+    throw err
+  }
+}
+
+async function getAll(){
+    return request('/users')
 }
 
 async function create(payload){
-    const res = await fetch(`${BASE_URL}/users`, {
-        signal: AbortSignal.timeout(5000),
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json'},
-        body: JSON.stringify(payload)
-    })
-    return handleResponse(res)
+    return request('/users', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
 }
 
 async function update(id, payload){
-    const res = await fetch(`${BASE_URL}/users/${id}`, {
-        signal: AbortSignal.timeout(5000),
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json'},
-        body: JSON.stringify(payload)
-    })
-    return handleResponse(res)
+    return request(`/users/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
 }
 
 async function remove(id){
-    const res = await fetch(`${BASE_URL}/users/${id}`, {
-        signal: AbortSignal.timeout(5000),
-        method: 'DELETE'
-    })
-    return handleResponse(res)
+    return request(`/users/${id}`, {
+    method: 'DELETE'
+  })
 }
 
 export const userService = { getAll, create, update, remove }
